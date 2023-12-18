@@ -17,7 +17,7 @@ if 'file_loaded' not in st.session_state:
     st.session_state['file_loaded'] = False
 
 # Model weights
-model = Doc2Vec.load('model/doc2vec_max.model')
+model = Doc2Vec.load('model/doc2vec_v2.model')
 
 # Fixed dataset of open positions
 jobs = pd.read_csv('data/hhparser_vacancy.csv')
@@ -107,19 +107,19 @@ def main():
 
             # find the closest embedding in index
             distances, indices = index.search(v1, 5)
+
             indices = indices[0]
 
             salary = f"\n{jobs.loc[indices[0], 'salary_from']} - {jobs.loc[indices[0], 'salary_to']}" \
-                if jobs.loc[indices[0], ['salary_from', 'salary_to']].notna().all() else "\nз/п не указана"
+                if jobs.loc[indices[0], ['salary_from', 'salary_to']].notna().all() else " \n з/п не указана"
 
-            msg = (f"Matched Job:"
-                   f"\n[{jobs.loc[indices[0], 'name']} - {jobs.loc[indices[0], 'employer_name']}]({jobs.loc[indices[0], 'alternate_url']})"
-                   f"\n{salary}"
-                   f"\n{jobs.loc[indices[0], 'description']}")
+            msg = (f"## It's a match! \n"
+                   f"## [{jobs.loc[indices[0], 'name']} - {jobs.loc[indices[0], 'employer_name']}]({jobs.loc[indices[0], 'alternate_url']}) \n"
+                   f"### {salary} \n"
+                   f"{jobs.loc[indices[0], 'description']}")
             # TODO button gallery with first k (5) matches
 
             st.markdown(msg, unsafe_allow_html=True)
-
 
 if __name__ == "__main__":
     main()
