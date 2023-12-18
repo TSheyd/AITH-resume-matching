@@ -1,7 +1,8 @@
 import numpy as np
 import streamlit as st
 from pathlib import Path
-import PyPDF2
+import pdfplumber
+import re
 import base64
 
 import os
@@ -25,10 +26,10 @@ if 'current_page' not in st.session_state:
 model = Doc2Vec.load('model/doc2vec_v2.model')
 
 # Fixed dataset of open positions
-jobs = pd.read_csv('data/hhparser_vacancy.csv')
+jobs = pd.read_csv('data/hhparser_vacancy_short.csv')
 
 # Embeddings
-index = read_index("model/hh.index")
+index = read_index("model/hh_v2_short.index")
 
 
 # HTML stripping (https://stackoverflow.com/questions/753052/strip-html-from-strings-in-python)
@@ -54,13 +55,15 @@ def strip_tags(html):
 def read_resume(path):
     resume = []
 
-    with open(path, 'rb') as f:
-        pdf = PyPDF2.PdfReader(f)
+    with pdfplumber.open(path) as pdf:
         for page in pdf.pages:
-            text = page.extract_text()
-            resume.append(text)
+            text = page.extract_text(x_tolerance=2)
+            if text:
+                text = re.sub(r'\s+', ' ', text)  # Normalize whitespace
+                text = re.sub(r'[^\w\s]', '', text)  # Remove punctuation
+                resume.append(text)
 
-    resume = ' '.join([e.replace(' ', '').replace('\n', ' ').lower() for e in resume])
+    resume = ' '.join([e.replace('\n', ' ').lower() for e in resume])
     return resume
 
 
@@ -92,6 +95,7 @@ def main():
             # Display the PDF
             with open(f"cache/{uploaded_file.name}", "wb") as f:
                 f.write(uploaded_file.getbuffer())
+
             # st.success("File Uploaded Successfully")
             st.session_state['file_loaded'] = True
 
@@ -113,10 +117,8 @@ def main():
             # find the closest embedding in index
             distances, indices = index.search(v1, 5)
 
-            indices = indices[0]
-
-            matches = {}
-            for i in set(indices):
+            matches = []
+            for i in indices[0]:
                 title = f"[{jobs.loc[i, 'name']} - {jobs.loc[i, 'employer_name']}]({jobs.loc[i, 'alternate_url']})"
 
                 if jobs.loc[i, ['salary_from', 'salary_to']].notna().all():
@@ -131,15 +133,15 @@ def main():
                 descriprion = jobs.loc[i, 'description'] if jobs.loc[i, 'description'] \
                     else "Описание доступно только по ссылке :("
 
-                matches[i] = (f"## {title} \n"
-                              f"### {salary} \n"
-                              f"{descriprion}")
+                matches.append(f"## {title} \n"
+                               f"### {salary} \n"
+                               f"{descriprion}")
 
             if matches:
                 st.markdown(f"## It's a match! \n", unsafe_allow_html=True)
 
                 # Determine the offers to display on the current page
-                match = list(matches.values())[st.session_state['current_page']]
+                match = matches[st.session_state['current_page']]
                 st.markdown(match, unsafe_allow_html=True)
 
                 # Pagination UI
@@ -150,6 +152,7 @@ def main():
                     st.session_state['current_page'] = max(0, st.session_state['current_page']-1)
                 if next.button("Next"):
                     st.session_state['current_page'] = min(len(matches)-1, st.session_state['current_page']+1)
+
                 counter.text(f"Page {st.session_state['current_page'] + 1} of {len(matches)}")
 
 
