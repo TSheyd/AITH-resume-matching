@@ -16,6 +16,10 @@ import pandas as pd
 if 'file_loaded' not in st.session_state:
     st.session_state['file_loaded'] = False
 
+# Initialize or update the current page in session state
+if 'current_page' not in st.session_state:
+    st.session_state['current_page'] = 0
+
 # Model weights
 model = Doc2Vec.load('model/doc2vec_v2.model')
 
@@ -111,7 +115,6 @@ def main():
             indices = indices[0]
 
             matches = {}
-
             for i in set(indices):
                 title = f"[{jobs.loc[i, 'name']} - {jobs.loc[i, 'employer_name']}]({jobs.loc[i, 'alternate_url']})"
 
@@ -121,14 +124,30 @@ def main():
                 descriprion = jobs.loc[i, 'description'] if jobs.loc[i, 'description'] \
                     else "Описание доступно только по ссылке :("
 
-                matches[i] = (f"## It's a match! \n"
-                              f"## {title} \n"
+                matches[i] = (f"## {title} \n"
                               f"### {salary} \n"
                               f"{descriprion}")
                 # TODO button gallery with first k (5) matches
 
-            for match in matches.values():
+            if matches:
+                st.markdown(f"## It's a match! \n", unsafe_allow_html=True)
+
+                # Determine the offers to display on the current page
+                match = list(matches.values())[st.session_state['current_page']]
                 st.markdown(match, unsafe_allow_html=True)
+
+                # Pagination UI
+                pagination_container = st.container()
+                counter, prev, next = pagination_container.columns([8, 1, 1])
+
+                counter.text(f"Page {st.session_state['current_page'] + 1} of {len(matches)}")
+
+                if prev.button("Previous"):
+                    if st.session_state['current_page'] > 0:
+                        st.session_state['current_page'] -= 1
+                if next.button("Next"):
+                    if st.session_state['current_page'] < len(matches) - 1:
+                        st.session_state['current_page'] += 1
 
 
 if __name__ == "__main__":
