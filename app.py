@@ -95,7 +95,7 @@ def main():
         else:
             st.session_state['file_loaded'] = False
 
-    with (col2):
+    with col2:
         st.header("Matching Results", anchor=False)
 
         if st.session_state['file_loaded']:
@@ -110,16 +110,26 @@ def main():
 
             indices = indices[0]
 
-            salary = f"\n{jobs.loc[indices[0], 'salary_from']} - {jobs.loc[indices[0], 'salary_to']}" \
-                if jobs.loc[indices[0], ['salary_from', 'salary_to']].notna().all() else " \n з/п не указана"
+            matches = {}
 
-            msg = (f"## It's a match! \n"
-                   f"## [{jobs.loc[indices[0], 'name']} - {jobs.loc[indices[0], 'employer_name']}]({jobs.loc[indices[0], 'alternate_url']}) \n"
-                   f"### {salary} \n"
-                   f"{jobs.loc[indices[0], 'description']}")
-            # TODO button gallery with first k (5) matches
+            for i in set(indices):
+                title = f"[{jobs.loc[i, 'name']} - {jobs.loc[i, 'employer_name']}]({jobs.loc[i, 'alternate_url']})"
 
-            st.markdown(msg, unsafe_allow_html=True)
+                salary = f"{jobs.loc[i, 'salary_from']} - {jobs.loc[i, 'salary_to']}" \
+                    if jobs.loc[i, ['salary_from', 'salary_to']].notna().all() else "з/п не указана"
+
+                descriprion = jobs.loc[i, 'description'] if jobs.loc[i, 'description'] \
+                    else "Описание доступно только по ссылке :("
+
+                matches[i] = (f"## It's a match! \n"
+                              f"## {title} \n"
+                              f"### {salary} \n"
+                              f"{descriprion}")
+                # TODO button gallery with first k (5) matches
+
+            for match in matches.values():
+                st.markdown(match, unsafe_allow_html=True)
+
 
 if __name__ == "__main__":
     main()
