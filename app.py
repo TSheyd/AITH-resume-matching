@@ -119,8 +119,14 @@ def main():
             for i in set(indices):
                 title = f"[{jobs.loc[i, 'name']} - {jobs.loc[i, 'employer_name']}]({jobs.loc[i, 'alternate_url']})"
 
-                salary = f"{jobs.loc[i, 'salary_from']} - {jobs.loc[i, 'salary_to']}" \
-                    if jobs.loc[i, ['salary_from', 'salary_to']].notna().all() else "з/п не указана"
+                if jobs.loc[i, ['salary_from', 'salary_to']].notna().all():
+                    salary = f"{jobs.loc[i, 'salary_from']} - {jobs.loc[i, 'salary_to']}"
+                elif jobs.loc[i, 'salary_from'] > 0:
+                    salary = f"З/П от {int(jobs.loc[i, 'salary_from'])}"
+                elif jobs.loc[i, 'salary_to'] > 0:
+                    salary = f"З/П до {int(jobs.loc[i, 'salary_to'])}"
+                else:
+                    salary = f"З/П не указана"
 
                 descriprion = jobs.loc[i, 'description'] if jobs.loc[i, 'description'] \
                     else "Описание доступно только по ссылке :("
@@ -128,7 +134,6 @@ def main():
                 matches[i] = (f"## {title} \n"
                               f"### {salary} \n"
                               f"{descriprion}")
-                # TODO button gallery with first k (5) matches
 
             if matches:
                 st.markdown(f"## It's a match! \n", unsafe_allow_html=True)
