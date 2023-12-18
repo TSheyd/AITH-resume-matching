@@ -4,6 +4,7 @@ from pathlib import Path
 import PyPDF2
 import base64
 
+import os
 from io import StringIO
 from html.parser import HTMLParser
 
@@ -140,15 +141,20 @@ def main():
                 pagination_container = st.container()
                 counter, prev, next = pagination_container.columns([8, 1, 1])
 
-                counter.text(f"Page {st.session_state['current_page'] + 1} of {len(matches)}")
-
                 if prev.button("Previous"):
-                    if st.session_state['current_page'] > 0:
-                        st.session_state['current_page'] -= 1
+                    st.session_state['current_page'] = max(0, st.session_state['current_page']-1)
                 if next.button("Next"):
-                    if st.session_state['current_page'] < len(matches) - 1:
-                        st.session_state['current_page'] += 1
+                    st.session_state['current_page'] = min(len(matches)-1, st.session_state['current_page']+1)
+                counter.text(f"Page {st.session_state['current_page'] + 1} of {len(matches)}")
 
 
 if __name__ == "__main__":
+
+    # Create / clear cache
+    if "cache" not in os.listdir(os.curdir):
+        os.mkdir("cache")
+    else:
+        for file in os.listdir("cache/"):
+            os.unlink(f"cache/{file}")
+
     main()
