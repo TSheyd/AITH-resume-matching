@@ -1,6 +1,5 @@
 import numpy as np
 import streamlit as st
-from pathlib import Path
 import pdfplumber
 import re
 import base64
@@ -23,13 +22,13 @@ if 'current_page' not in st.session_state:
     st.session_state['current_page'] = 0
 
 # Model weights
-model = Doc2Vec.load('model/doc2vec_v2.model')
+model = Doc2Vec.load('model/doc2vec_v3.model')
 
 # Fixed dataset of open positions
 jobs = pd.read_csv('data/hhparser_vacancy_short.csv')
 
 # Embeddings
-index = read_index("model/hh_v2_short.index")
+index = read_index("model/hh_v3.index")
 
 
 # HTML stripping (https://stackoverflow.com/questions/753052/strip-html-from-strings-in-python)
@@ -64,6 +63,7 @@ def read_resume(path):
                 resume.append(text)
 
     resume = ' '.join([e.replace('\n', ' ').lower() for e in resume])
+    # print(resume)
     return resume
 
 
@@ -105,7 +105,7 @@ def main():
             st.session_state['file_loaded'] = False
 
     with col2:
-        st.header("Matching Results", anchor=False)
+        st.header("Results", anchor=False)
 
         if st.session_state['file_loaded']:
             # read and process file
@@ -117,12 +117,14 @@ def main():
             # find the closest embedding in index
             distances, indices = index.search(v1, 5)
 
+            # print(indices)
+
             matches = []
             for i in indices[0]:
                 title = f"[{jobs.loc[i, 'name']} - {jobs.loc[i, 'employer_name']}]({jobs.loc[i, 'alternate_url']})"
 
                 if jobs.loc[i, ['salary_from', 'salary_to']].notna().all():
-                    salary = f"{jobs.loc[i, 'salary_from']} - {jobs.loc[i, 'salary_to']}"
+                    salary = f"{int(jobs.loc[i, 'salary_from'])} - {int(jobs.loc[i, 'salary_to'])}"
                 elif jobs.loc[i, 'salary_from'] > 0:
                     salary = f"З/П от {int(jobs.loc[i, 'salary_from'])}"
                 elif jobs.loc[i, 'salary_to'] > 0:
@@ -140,20 +142,19 @@ def main():
             if matches:
                 st.markdown(f"## It's a match! \n", unsafe_allow_html=True)
 
-                # Determine the offers to display on the current page
-                match = matches[st.session_state['current_page']]
-                st.markdown(match, unsafe_allow_html=True)
-
                 # Pagination UI
                 pagination_container = st.container()
-                counter, prev, next = pagination_container.columns([8, 1, 1])
+                prev, next, counter = pagination_container.columns([1, 1, 8])
 
                 if prev.button("Previous"):
                     st.session_state['current_page'] = max(0, st.session_state['current_page']-1)
                 if next.button("Next"):
                     st.session_state['current_page'] = min(len(matches)-1, st.session_state['current_page']+1)
+                counter.markdown(f"#### Page {st.session_state['current_page'] + 1} of {len(matches)}")
 
-                counter.text(f"Page {st.session_state['current_page'] + 1} of {len(matches)}")
+                # Determine the offers to display on the current page
+                match = matches[st.session_state['current_page']]
+                st.markdown(match, unsafe_allow_html=True)
 
 
 if __name__ == "__main__":
