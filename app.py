@@ -22,13 +22,13 @@ if 'current_page' not in st.session_state:
     st.session_state['current_page'] = 0
 
 # Model weights
-model = Doc2Vec.load('model/doc2vec_v3.model')
+model = Doc2Vec.load('model/doc2vec_v4en.model')
 
 # Fixed dataset of open positions
 jobs = pd.read_csv('data/hhparser_vacancy_short.csv')
 
 # Embeddings
-index = read_index("model/hh_v3.index")
+index = read_index("model/hh_v4en.index")
 
 
 # HTML stripping (https://stackoverflow.com/questions/753052/strip-html-from-strings-in-python)
