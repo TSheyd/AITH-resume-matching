@@ -67,6 +67,47 @@ def read_resume(path):
     return resume
 
 
+def weighted_read_resume(path) -> str:
+    """
+    Reading file and multiplying words based on relative font size
+    May work better since Doc2Vec uses DBOW which does a bag-of-words style architecture
+
+    :param str path: path to file
+    :return: processed str
+    """
+
+    font_sizes = []
+    weighted_text = []
+
+    with pdfplumber.open(path) as pdf:
+        for page in pdf.pages:
+            words = page.extract_words(x_tolerance=2, keep_blank_chars=True, use_text_flow=True,
+                                       extra_attrs=["size"])
+            font_sizes.extend([float(word['size']) for word in words])
+
+        # Calculate median font size
+        median_size = np.median(font_sizes)
+
+        # a bit of processing - some non-letter chars can be considered as spaces
+
+        for word in words:
+            word_text = word['text'].replace('/', ' ').replace('-', ' ').strip('.,').lower()
+            word_size = float(word['size'])
+
+            # Assign weight based on font size (example: 2x for each size unit above median)
+            if word_size > median_size:
+                weight = (word_size * 1.3 / median_size)
+            else:
+                weight = 1
+
+            # Replicate word based on weight
+            weighted_text.extend([word_text] * int(round(weight)))
+
+    weighted_text = " ".join([e for e in weighted_text if any(c.isalpha() for c in e)])
+
+    return weighted_text
+
+
 def displayPDF(file):
     # Opening file from file path
     with open(file, "rb") as f:
