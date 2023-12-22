@@ -123,32 +123,50 @@ def displayPDF(file):
 
 def main():
     # Page config
-    st.set_page_config(layout="wide")
+    st.set_page_config(page_title="CV Matching App",
+                       page_icon="🧊",
+                       layout="wide")
     st.title("🔮 Resume matching app 🔮", anchor=False)
 
     # Splitting the page into two columns
-    col1, col2 = st.columns(2)
+    col1, col_mid, col2 = st.columns([6, 0.4, 6])
 
     with col1:
         st.header("Upload Resume", anchor=False)
-        uploaded_file = st.file_uploader("Upload your CV in PDF format...", type="pdf")
-        if uploaded_file is not None:
-            # Display the PDF
-            with open(f"cache/{uploaded_file.name}", "wb") as f:
-                f.write(uploaded_file.getbuffer())
 
-            # st.success("File Uploaded Successfully")
-            st.session_state['file_loaded'] = True
+        with st.form("CV_upload_form", clear_on_submit=False, border=False):
+            # Список введеных пользователем полей: специальность, регион, образование
+            # и чуть ниже мин. и макс. ожидаемая з/п
 
-            displayPDF(f"cache/{uploaded_file.name}")
+            specialty = st.text_input("Введите вашу специальность", value="")
+            region = st.text_input("Введите регион", value="")
+            education = st.text_input("Введите свой текущий уровень образования", value="")
+            expected_salary = st.number_input("Введите свою ожидаемую з/п",
+                                              min_value=0,
+                                              step=5000)
 
-        else:
-            st.session_state['file_loaded'] = False
+            # Пусть будет допустим диапазон ±20% от введенной з/п
+            min_expected_salary, max_expected_salary = 0.8 * expected_salary, 1.2 * expected_salary
+
+            uploaded_file = st.file_uploader("Upload your CV in PDF format*", type="pdf", help='Обязательное поле')
+            submitted = st.form_submit_button("Отправить CV")
+        if submitted is not None:
+            if uploaded_file:
+                # Display the PDF
+                with open(f"cache/{uploaded_file.name}", "wb") as f:
+                    f.write(uploaded_file.getbuffer())
+
+                # st.success("File Uploaded Successfully")
+                st.session_state['file_loaded'] = True
+
+                displayPDF(f"cache/{uploaded_file.name}")
+            else:
+                st.info("Для того, чтобы получить результат, необходимо загрузить PDF-файл резюме и нажать на кнопку")
+                st.session_state['file_loaded'] = False
 
     with col2:
-        st.header("Results", anchor=False)
-
         if st.session_state['file_loaded']:
+            st.header("Results", anchor=False)
             # read and process file
             resume_vocab = read_resume(f"cache/{uploaded_file.name}")
 
@@ -185,7 +203,7 @@ def main():
 
                 # Pagination UI
                 pagination_container = st.container()
-                prev, next, counter = pagination_container.columns([1, 1, 8])
+                prev, next, counter = pagination_container.columns([2, 2, 6])
 
                 if prev.button("Previous"):
                     st.session_state['current_page'] = max(0, st.session_state['current_page']-1)
