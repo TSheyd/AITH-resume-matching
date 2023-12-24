@@ -37,6 +37,13 @@ index = read_index("model/hh_v4en.index")
 #knn Model
 knn_model = load('model/knn.joblib')
 
+#fasttext model
+os.chdir('model')
+fasttext.util.download_model('ru', if_exists='ignore')
+os.chdir('..')
+fasttext_model = fasttext.load_model('model/cc.ru.300.bin')
+fasttext.util.reduce_model(fasttext_model, 100)
+
 
 # HTML stripping (https://stackoverflow.com/questions/753052/strip-html-from-strings-in-python)
 class MLStripper(HTMLParser):
@@ -128,8 +135,8 @@ def displayPDF(file):
     st.markdown(pdf_display, unsafe_allow_html=True)
 
 def get_short_jobs(data, specialty, region, expected_salary):
-    vacancy_emb = [model.get_word_vector(word) for word in specialty.split(' ')][0].tolist()
-    my_city_emb = [model.get_word_vector(word) for word in region.split(' ')][0].tolist()  
+    vacancy_emb = [fasttext_model.get_word_vector(word) for word in specialty.split(' ')][0].tolist()
+    my_city_emb = [fasttext_model.get_word_vector(word) for word in region.split(' ')][0].tolist()  
     res = knn_model.kneighbors([vacancy_emb+my_city_emb+[expected_salary]], return_distance=False)
     data = data.iloc[res[0]].copy()
     return data
