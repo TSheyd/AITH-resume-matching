@@ -185,3 +185,9 @@ fabric.properties
 .idea
 .DS_Store
 cache/
+
+#added by grishechka
+.streamlit
+.ipynb_checkpoints
+data/*
+model/*

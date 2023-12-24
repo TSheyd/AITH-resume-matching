@@ -12,6 +12,10 @@ from gensim.models.doc2vec import Doc2Vec
 from faiss import read_index
 import pandas as pd
 
+import fasttext
+import fasttext.util
+from sklearn.neighbors import NearestNeighbors
+from joblib import dump, load
 
 # Initialize session state variables if they don't exist
 if 'file_loaded' not in st.session_state:
@@ -25,10 +29,13 @@ if 'current_page' not in st.session_state:
 model = Doc2Vec.load('model/doc2vec_v4en.model')
 
 # Fixed dataset of open positions
-jobs = pd.read_csv('data/hhparser_vacancy_short.csv')
+jobs = pd.read_csv('data/edited.csv')
 
 # Embeddings
 index = read_index("model/hh_v4en.index")
+
+#knn Model
+knn_model = load('model/knn.joblib')
 
 
 # HTML stripping (https://stackoverflow.com/questions/753052/strip-html-from-strings-in-python)
@@ -120,6 +127,12 @@ def displayPDF(file):
     # Displaying File
     st.markdown(pdf_display, unsafe_allow_html=True)
 
+def get_short_jobs(data, specialty, region, expected_salary):
+    vacancy_emb = [model.get_word_vector(word) for word in specialty.split(' ')][0].tolist()
+    my_city_emb = [model.get_word_vector(word) for word in region.split(' ')][0].tolist()  
+    res = knn_model.kneighbors([vacancy_emb+my_city_emb+[expected_salary]], return_distance=False)
+    data = data.iloc[res[0]].copy()
+    return data
 
 def main():
     # Page config
@@ -140,6 +153,7 @@ def main():
 
             specialty = st.text_input("Введите вашу специальность", value="")
             region = st.text_input("Введите регион", value="")
+            #А нужен ли нам этот эдукейшон ваш? 
             education = st.text_input("Введите свой текущий уровень образования", value="")
             expected_salary = st.number_input("Введите свою ожидаемую з/п",
                                               min_value=0,
@@ -179,6 +193,7 @@ def main():
             # print(indices)
 
             matches = []
+            jobs = get_short_jobs(jobs, specialty, region, expected_salary)
             for i in indices[0]:
                 title = f"[{jobs.loc[i, 'name']} - {jobs.loc[i, 'employer_name']}]({jobs.loc[i, 'alternate_url']})"
 
@@ -214,6 +229,8 @@ def main():
                 # Determine the offers to display on the current page
                 match = matches[st.session_state['current_page']]
                 st.markdown(match, unsafe_allow_html=True)
+
+    
 
 
 if __name__ == "__main__":
