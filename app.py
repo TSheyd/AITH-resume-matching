@@ -15,7 +15,7 @@ import pandas as pd
 import fasttext
 import fasttext.util
 from sklearn.neighbors import NearestNeighbors
-from joblib import dump, load
+from joblib import load
 
 # Initialize session state variables if they don't exist
 if 'file_loaded' not in st.session_state:
