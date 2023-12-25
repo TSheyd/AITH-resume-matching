@@ -9,7 +9,7 @@ from io import StringIO
 from html.parser import HTMLParser
 
 from gensim.models.doc2vec import Doc2Vec
-from faiss import read_index
+import faiss
 import pandas as pd
 
 import fasttext
@@ -29,10 +29,10 @@ if 'current_page' not in st.session_state:
 model = Doc2Vec.load('model/doc2vec_v4en.model')
 
 # Fixed dataset of open positions
-jobs = pd.read_csv('data/edited.csv')
+jobs = pd.read_csv('data/edited_infered.csv')
 
-# Embeddings
-index = read_index("model/hh_v4en.index")
+# Embeddings are loaded in jobs...
+# index = read_index("model/hh_v4en.index")
 
 #knn Model
 knn_model = load('model/knn.joblib')
@@ -134,12 +134,14 @@ def displayPDF(file):
     # Displaying File
     st.markdown(pdf_display, unsafe_allow_html=True)
 
+
 def get_short_jobs(data, specialty, region, expected_salary):
     vacancy_emb = [fasttext_model.get_word_vector(word) for word in specialty.split(' ')][0].tolist()
     my_city_emb = [fasttext_model.get_word_vector(word) for word in region.split(' ')][0].tolist()  
     res = knn_model.kneighbors([vacancy_emb+my_city_emb+[expected_salary]], return_distance=False)
     data = data.iloc[res[0]].copy()
     return data
+
 
 def main():
     # Page config
@@ -194,14 +196,20 @@ def main():
             # get doc vector
             v1 = np.array([model.infer_vector(resume_vocab.split())])
 
-            # find the closest embedding in index
-            distances, indices = index.search(v1, 5)
+            # filter vacancies by title, location and salary
+            jobs_short = get_short_jobs(jobs, specialty, region, expected_salary)
 
-            # print(indices)
+            # Sliced content embedding index with slice from jobs_short
+            index_short = faiss.IndexFlatL2(80)  # size from model params in train_d2v
+            indices = [[float(e) for e in xs.strip('[]').split()] for xs in jobs_short.embd.values.tolist()]
+            index_short.add(np.array(indices))
+
+            # find the closest embedding in index
+            distances, indices = index_short.search(v1, 5)
 
             matches = []
-            jobs = get_short_jobs(jobs, specialty, region, expected_salary)
             for i in indices[0]:
+
                 title = f"[{jobs.loc[i, 'name']} - {jobs.loc[i, 'employer_name']}]({jobs.loc[i, 'alternate_url']})"
 
                 if jobs.loc[i, ['salary_from', 'salary_to']].notna().all():
@@ -236,8 +244,6 @@ def main():
                 # Determine the offers to display on the current page
                 match = matches[st.session_state['current_page']]
                 st.markdown(match, unsafe_allow_html=True)
-
-    
 
 
 if __name__ == "__main__":
