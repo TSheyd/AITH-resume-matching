@@ -12,18 +12,10 @@ from gensim.models.doc2vec import Doc2Vec
 import faiss
 import pandas as pd
 
-import fasttext
-import fasttext.util
+from fasttext import load_model
+from fasttext.util import reduce_model, download_model
 from sklearn.neighbors import NearestNeighbors
 from joblib import load
-
-# Initialize session state variables if they don't exist
-if 'file_loaded' not in st.session_state:
-    st.session_state['file_loaded'] = False
-
-# Initialize or update the current page in session state
-if 'current_page' not in st.session_state:
-    st.session_state['current_page'] = 0
 
 # Model weights
 model = Doc2Vec.load('model/doc2vec_v4en.model')
@@ -32,17 +24,27 @@ model = Doc2Vec.load('model/doc2vec_v4en.model')
 jobs = pd.read_csv('data/edited_infered.csv')
 
 # Embeddings are loaded in jobs...
-# index = read_index("model/hh_v4en.index")
+# index = faiss.read_index("model/hh_v4en.index")
 
 #knn Model
 knn_model = load('model/knn.joblib')
 
 #fasttext model
 os.chdir('model')
-fasttext.util.download_model('ru', if_exists='ignore')
+download_model('ru', if_exists='ignore')
 os.chdir('..')
-fasttext_model = fasttext.load_model('model/cc.ru.300.bin')
-fasttext.util.reduce_model(fasttext_model, 100)
+fasttext_model = load_model('model/cc.ru.300.bin')
+reduce_model(fasttext_model, 100)
+
+
+# Initialize session variables
+if 'file_loaded' not in st.session_state:
+    st.session_state['file_loaded'] = False
+
+if 'current_page' not in st.session_state:
+    st.session_state['current_page'] = 0
+
+min_expected_salary, max_expected_salary = -1, 1e12
 
 
 # HTML stripping (https://stackoverflow.com/questions/753052/strip-html-from-strings-in-python)
@@ -162,14 +164,12 @@ def main():
 
             specialty = st.text_input("Введите вашу специальность", value="")
             region = st.text_input("Введите регион", value="")
-            #А нужен ли нам этот эдукейшон ваш? 
-            education = st.text_input("Введите свой текущий уровень образования", value="")
+
             expected_salary = st.number_input("Введите свою ожидаемую з/п",
                                               min_value=0,
                                               step=5000)
-
-            # Пусть будет допустим диапазон ±20% от введенной з/п
-            min_expected_salary, max_expected_salary = 0.8 * expected_salary, 1.2 * expected_salary
+            # Пусть будет допустим диапазон ±30% от введенной з/п
+            min_expected_salary, max_expected_salary = 0.7 * expected_salary, 1.3 * expected_salary
 
             uploaded_file = st.file_uploader("Upload your CV in PDF format*", type="pdf", help='Обязательное поле')
             submitted = st.form_submit_button("Отправить CV")
@@ -184,7 +184,7 @@ def main():
 
                 displayPDF(f"cache/{uploaded_file.name}")
             else:
-                st.info("Для того, чтобы получить результат, необходимо загрузить PDF-файл резюме и нажать на кнопку")
+                st.info("Чтобы получить результат, необходимо загрузить PDF-файл резюме и нажать на кнопку")
                 st.session_state['file_loaded'] = False
 
     with col2:
@@ -198,6 +198,7 @@ def main():
 
             # filter vacancies by title, location and salary
             jobs_short = get_short_jobs(jobs, specialty, region, expected_salary)
+            jobs_short = jobs_short.loc[(jobs_short['salary_from'] >= min_expected_salary)]  # assuming RUB currency
 
             # Sliced content embedding index with slice from jobs_short
             index_short = faiss.IndexFlatL2(80)  # size from model params in train_d2v
