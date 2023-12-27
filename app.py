@@ -23,13 +23,11 @@ model = Doc2Vec.load('model/doc2vec_v4en.model')
 # Fixed dataset of open positions
 jobs = pd.read_csv('data/hh_normal.csv')
 
-# Embeddings are loaded in jobs...
-# index = faiss.read_index("model/hh_v4en.index")
-
 #knn Model
 knn_model = load('model/knn.joblib')
 
 #fasttext model
+print(os.listdir(os.curdir))
 os.chdir('model')
 download_model('ru', if_exists='ignore')
 os.chdir('..')
@@ -79,7 +77,6 @@ def read_resume(path):
                 resume.append(text)
 
     resume = ' '.join([e.replace('\n', ' ').lower() for e in resume])
-    # print(resume)
     return resume
 
 
