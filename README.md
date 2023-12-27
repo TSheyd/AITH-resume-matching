@@ -38,7 +38,7 @@ AI Talent Hub Deep Learning Practice Course - NLP project on matching resumes wi
 
 
 # Запуск
-1. Клонирование репозитория: `git clone https://github.com/TSheyd/AITH-resume-matching.git -b main`
+1. Клонирование репозитория: `git clone https://github.com/TSheyd/AITH-resume-matching.git`
 2. Установка зависимостей: `pip install requirements.txt`. По версии Python - мы использовали 3.11.
 3. Скачай последние версии модели и датасета по [ссылке](https://disk.yandex.ru/d/lRbEmHhipI51MQ), 
 загрузи их в директории `model/` и `data/` соответственно.
